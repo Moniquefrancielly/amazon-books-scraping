@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon BR — Livros Mais Vendidos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0c0c0f;
+    --surface: #141418;
+    --surface2: #1c1c22;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0efe8;
+    --text2: #9998a0;
+    --text3: #55545c;
+    --purple: #AFA9EC;
+    --purple-dark: #7F77DD;
+    --teal: #5DCAA5;
+    --coral: #F0997B;
+    --amber: #FAC775;
+    --blue: #85B7EB;
+    --pink: #ED93B1;
+    --green: #97C459;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+  header { margin-bottom: 2.5rem; border-bottom: 0.5px solid var(--border); padding-bottom: 1.5rem; }
+  header .eyebrow { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  header h1 { font-size: 28px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+  header p { font-size: 13px; color: var(--text2); }
+
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
+  .metric { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px; }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+  .metric-value { font-size: 26px; font-weight: 500; color: var(--text); line-height: 1; }
+  .metric-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card-title { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 16px; }
+
+  .insight { border-left: 2px solid var(--purple-dark); padding: 10px 14px; margin-top: 16px; font-size: 12px; color: var(--text2); line-height: 1.7; }
+  .insight strong { color: var(--text); font-weight: 500; }
+
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-label { font-size: 12px; color: var(--text2); width: 150px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: var(--surface2); border-radius: 3px; height: 6px; }
+  .bar-fill { height: 6px; border-radius: 3px; transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+  .bar-val { font-size: 11px; color: var(--text3); width: 55px; text-align: right; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+
+  .filter-group { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filter-btn { font-size: 11px; padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .filter-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .filter-btn.active { background: var(--purple); color: #1a1940; border-color: var(--purple); font-weight: 500; }
+
+  .rank-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+  .rank-row:last-child { border-bottom: none; }
+  .rank-num { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); width: 24px; flex-shrink: 0; padding-top: 2px; }
+  .rank-info { flex: 1; min-width: 0; }
+  .rank-title { font-size: 13px; color: var(--text); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+  .rank-meta { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .rank-price { font-size: 13px; color: var(--teal); font-weight: 500; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+
+  .chart-wrap { position: relative; }
+
+  @media (max-width: 768px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="eyebrow">web scraping · amazon.com.br · abril 2026</div>
+    <h1>Livros mais vendidos</h1>
+    <p>80 títulos coletados via Playwright · dados extraídos em 12/04/2026</p>
+  </header>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">títulos coletados</div>
+      <div class="metric-value">80</div>
+      <div class="metric-sub">Amazon BR</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">preço médio</div>
+      <div class="metric-value">R$ 41,62</div>
+      <div class="metric-sub">excluindo outliers</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">avaliação média</div>
+      <div class="metric-value">4,77 ★</div>
+      <div class="metric-sub">de 5,0 estrelas</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">mais avaliado</div>
+      <div class="metric-value">78K</div>
+      <div class="metric-sub">Verity · Colleen Hoover</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">autores com mais livros no ranking</div>
+      <div id="barAutores"></div>
+      <div class="insight"><strong>Panini domina</strong> com 4 produtos da Copa 2026. Entre autores literários, <strong>Rebecca Yarros</strong> lidera com a saga Quarta Asa (3 livros).</div>
+    </div>
+    <div class="card">
+      <div class="card-title">livros com mais avaliações</div>
+      <div id="barAvaliacoes"></div>
+      <div class="insight"><strong>Verity</strong> lidera com 78K avaliações. Os top 5 são todos thrillers ou romances contemporâneos — os gêneros favoritos do Brasil.</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">distribuição de preços</div>
+      <div class="chart-wrap" style="height:200px;">
+        <canvas id="chartPrecos"></canvas>
+      </div>
+      <div class="insight"><strong>57%</strong> dos livros custam entre R$ 30–60. Clássicos da literatura são os mais baratos — abaixo de R$ 20.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">preço médio por tipo de capa</div>
+      <div class="chart-wrap" style="height:200px;">
+        <canvas id="chartCapa"></canvas>
+      </div>
+      <div class="insight"><strong>Capa dura</strong> tem preço médio de R$ 52 — acima da capa comum (R$ 39). Livro de bolso é a opção mais econômica.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">preço × avaliação — tamanho da bolinha = nº de avaliações</div>
+    <div class="chart-wrap" style="height:280px;">
+      <canvas id="chartScatter"></canvas>
+    </div>
+    <div class="insight">Não há correlação entre preço e nota — livros de R$ 11 têm 4,9 estrelas. <strong>Qualidade percebida independe do preço</strong> nos mais vendidos.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ranking completo — filtrar por tipo de capa</div>
+    <div class="filter-group" id="filterBtns">
+      <button class="filter-btn active" onclick="filtrar('todos',this)">todos</button>
+      <button class="filter-btn" onclick="filtrar('Capa comum',this)">capa comum</button>
+      <button class="filter-btn" onclick="filtrar('Capa dura',this)">capa dura</button>
+      <button class="filter-btn" onclick="filtrar('Livro de bolso',this)">livro de bolso</button>
+      <button class="filter-btn" onclick="filtrar('Folheto',this)">folheto</button>
+    </div>
+    <div id="rankLista"></div>
+  </div>
+
+</div>
+
+<script>
+const livros = [
+  {pos:1,titulo:"A geração incrível",autor:"Jonathan Haidt",capa:"Capa comum",preco:62.91,av:5.0,nav:2},
+  {pos:2,titulo:"Copa FIFA 2026 Kit Envelopes",autor:"Panini",capa:"Capa comum",preco:84.0,av:null,nav:0},
+  {pos:3,titulo:"A cabeça do santo",autor:"Socorro Acioli",capa:"Capa comum",preco:39.76,av:4.8,nav:27782},
+  {pos:4,titulo:"Copa FIFA 2026 Álbum Capa Dura",autor:"Panini",capa:"Capa dura",preco:79.9,av:null,nav:0},
+  {pos:6,titulo:"365 Hábitos Simples e Poderosos",autor:"Paulo Houch",capa:"Capa comum",preco:19.9,av:4.8,nav:997},
+  {pos:7,titulo:"A hora da estrela",autor:"Clarice Lispector",capa:"Capa comum",preco:29.0,av:4.7,nav:25684},
+  {pos:8,titulo:"O cara que estou a fim - Vol. 3",autor:"Sumiko Arai",capa:"Capa comum",preco:35.9,av:4.9,nav:87},
+  {pos:9,titulo:"O Pequeno Príncipe (luxo)",autor:"Antoine Saint-Exupery",capa:"Capa dura",preco:13.9,av:4.9,nav:2139},
+  {pos:10,titulo:"Noites Brancas",autor:"Fiódor Dostoiévski",capa:"Capa comum",preco:11.36,av:4.6,nav:7253},
+  {pos:11,titulo:"Hábitos Atômicos",autor:"James Clear",capa:"Capa comum",preco:38.03,av:4.8,nav:26844},
+  {pos:13,titulo:"Verity",autor:"Colleen Hoover",capa:"Capa comum",preco:38.5,av:4.8,nav:78273},
+  {pos:14,titulo:"Murdoku",autor:"Manuel Garand",capa:"Capa comum",preco:44.9,av:4.9,nav:731},
+  {pos:15,titulo:"Perigoso! Este livro contém coelhos!",autor:"Tim Warnes",capa:"Capa comum",preco:14.64,av:4.8,nav:3901},
+  {pos:16,titulo:"A Metamorfose",autor:"Franz Kafka",capa:"Capa comum",preco:15.8,av:4.7,nav:19078},
+  {pos:17,titulo:"Oração para Desaparecer",autor:"Socorro Acioli",capa:"Capa comum",preco:40.49,av:4.6,nav:13903},
+  {pos:18,titulo:"Nunca minta",autor:"Freida McFadden",capa:"Capa comum",preco:39.24,av:4.6,nav:20837},
+  {pos:20,titulo:"Jantar secreto",autor:"Raphael Montes",capa:"Capa comum",preco:42.87,av:4.7,nav:22822},
+  {pos:21,titulo:"O massacre da família Hope",autor:"Riley Sager",capa:"Capa comum",preco:52.4,av:4.7,nav:9282},
+  {pos:22,titulo:"Devoradores de estrelas",autor:"Andy Weir",capa:"Capa comum",preco:69.9,av:4.8,nav:4370},
+  {pos:23,titulo:"Binding 13",autor:"Chloe Walsh",capa:"Capa comum",preco:50.85,av:4.7,nav:4577},
+  {pos:24,titulo:"Cartas de um diabo a seu aprendiz",autor:"C. S. Lewis",capa:"Capa dura",preco:35.81,av:4.8,nav:21880},
+  {pos:25,titulo:"A geração ansiosa",autor:"Jonathan Haidt",capa:"Capa comum",preco:40.73,av:4.8,nav:3514},
+  {pos:26,titulo:"A psicologia financeira",autor:"Morgan Housel",capa:"Capa comum",preco:36.0,av:4.8,nav:26678},
+  {pos:27,titulo:"Melhor do que nos filmes",autor:"Lynn Painter",capa:"Capa comum",preco:51.73,av:4.8,nav:13975},
+  {pos:28,titulo:"A Biblioteca da Meia-Noite",autor:"Matt Haig",capa:"Capa comum",preco:38.93,av:4.7,nav:66493},
+  {pos:29,titulo:"Sociedade do cansaço",autor:"Byung-Chul Han",capa:"Livro de bolso",preco:32.22,av:4.6,nav:17842},
+  {pos:30,titulo:"A paciente silenciosa",autor:"Alex Michaelides",capa:"Capa comum",preco:38.46,av:4.7,nav:48635},
+  {pos:33,titulo:"A hipótese do amor",autor:"Ali Hazelwood",capa:"Capa comum",preco:48.7,av:4.8,nav:25507},
+  {pos:34,titulo:"Café com Deus Pai Vol. 6",autor:"Júnior Rostirola",capa:"Capa comum",preco:41.62,av:4.9,nav:2145},
+  {pos:38,titulo:"A empregada",autor:"Freida McFadden",capa:"Capa comum",preco:42.65,av:4.7,nav:41987},
+  {pos:44,titulo:"Quarta asa",autor:"Rebecca Yarros",capa:"Capa comum",preco:69.29,av:4.9,nav:19072},
+  {pos:47,titulo:"O Meu Pé de Laranja Lima",autor:"José Mauro de Vasconcelos",capa:"Capa comum",preco:34.9,av:4.8,nav:6959},
+  {pos:48,titulo:"Jujutsu kaisen vol. 1",autor:"Gege Akutami",capa:"Capa comum",preco:35.05,av:4.9,nav:5279},
+  {pos:49,titulo:"O poder do subconsciente",autor:"Joseph Murphy",capa:"Capa comum",preco:29.99,av:4.8,nav:19747},
+  {pos:51,titulo:"Não é como nos filmes",autor:"Lynn Painter",capa:"Capa comum",preco:49.78,av:4.8,nav:6114},
+  {pos:52,titulo:"O cara que estou a fim - Vol. 1",autor:"Sumiko Arai",capa:"Capa comum",preco:27.9,av:4.9,nav:3214},
+  {pos:54,titulo:"Orgulho e Preconceito",autor:"Jane Austen",capa:"Capa comum",preco:15.0,av:4.7,nav:2726},
+  {pos:55,titulo:"Vidas secas",autor:"Graciliano Ramos",capa:"Capa comum",preco:15.0,av:4.8,nav:16459},
+  {pos:56,titulo:"Tudo é rio",autor:"Carla Madeira",capa:"Capa comum",preco:45.43,av:4.7,nav:65749},
+  {pos:57,titulo:"Mais esperto que o diabo",autor:"Napoleon Hill",capa:"Capa comum",preco:34.9,av:4.7,nav:55897},
+  {pos:58,titulo:"A gente mira no amor",autor:"Ana Suy",capa:"Capa comum",preco:36.85,av:4.7,nav:19293},
+  {pos:59,titulo:"Ainda estou aqui",autor:"Marcelo Rubens Paiva",capa:"Capa comum",preco:49.37,av:4.8,nav:12088},
+  {pos:60,titulo:"O cara que estou a fim - Vol. 2",autor:"Sumiko Arai",capa:"Capa comum",preco:27.9,av:4.9,nav:1829},
+  {pos:62,titulo:"O Morro dos Ventos Uivantes",autor:"Emily Brontë",capa:"Capa comum",preco:16.04,av:4.6,nav:726},
+  {pos:63,titulo:"Deixa pra lá",autor:"Mel Robbins",capa:"Capa comum",preco:38.4,av:4.6,nav:1536},
+  {pos:64,titulo:"Saving 6",autor:"Chloe Walsh",capa:"Capa comum",preco:50.85,av:4.8,nav:1992},
+  {pos:66,titulo:"Água fresca para as flores",autor:"Valérie Perrin",capa:"Capa comum",preco:59.9,av:4.7,nav:10936},
+  {pos:67,titulo:"O Show da Luna",autor:"Ciranda Cultural",capa:"Folheto",preco:1.9,av:4.5,nav:3113},
+  {pos:70,titulo:"A Metamorfose - Luxo",autor:"Kafka",capa:"Capa dura",preco:23.55,av:4.7,nav:19078},
+  {pos:71,titulo:"Pequena coreografia do adeus",autor:"Aline Bei",capa:"Capa comum",preco:36.3,av:4.6,nav:16731},
+  {pos:72,titulo:"O livro que você gostaria",autor:"Philippa Perry",capa:"Capa comum",preco:39.37,av:4.8,nav:11727},
+  {pos:73,titulo:"Chama de Ferro",autor:"Rebecca Yarros",capa:"Capa comum",preco:62.59,av:4.8,nav:9617},
+  {pos:74,titulo:"O diário de uma princesa desastrada",autor:"Maidy Lacerda",capa:"Capa comum",preco:43.89,av:4.8,nav:5077},
+  {pos:75,titulo:"O estrangeiro",autor:"Albert Camus",capa:"Capa comum",preco:35.25,av:4.7,nav:8180},
+  {pos:77,titulo:"Imperfeitos",autor:"Christina Lauren",capa:"Capa comum",preco:19.0,av:4.6,nav:21273},
+  {pos:78,titulo:"Não Começou com Você",autor:"Mark Wolynn",capa:"Capa comum",preco:40.08,av:4.8,nav:3501},
+  {pos:79,titulo:"Comunicação não violenta",autor:"Marshall B. Rosenberg",capa:"Capa comum",preco:60.0,av:4.8,nav:16794},
+  {pos:80,titulo:"Tempestade de Ônix",autor:"Rebecca Yarros",capa:"Capa comum",preco:57.5,av:4.8,nav:6814},
+];
+
+const CORES = ["#AFA9EC","#5DCAA5","#F0997B","#FAC775","#85B7EB","#ED93B1","#97C459","#EF9F27"];
+
+const autorCount = {};
+livros.forEach(l => { autorCount[l.autor] = (autorCount[l.autor]||0)+1; });
+const topAutores = Object.entries(autorCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+const maxA = topAutores[0][1];
+const contA = document.getElementById('barAutores');
+topAutores.forEach(([nome,cnt],i) => {
+  contA.innerHTML += `<div class="bar-row">
+    <div class="bar-label" title="${nome}">${nome}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/maxA*100)}%;background:${CORES[i]};"></div></div>
+    <div class="bar-val">${cnt} livro${cnt>1?'s':''}</div>
+  </div>`;
+});
+
+const topNav = [...livros].filter(l=>l.nav>500).sort((a,b)=>b.nav-a.nav).slice(0,10);
+const maxN = topNav[0].nav;
+const contN = document.getElementById('barAvaliacoes');
+topNav.forEach((l,i) => {
+  contN.innerHTML += `<div class="bar-row">
+    <div class="bar-label" title="${l.titulo}">${l.titulo}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.round(l.nav/maxN*100)}%;background:${CORES[i%CORES.length]};"></div></div>
+    <div class="bar-val">${l.nav>=1000?Math.round(l.nav/1000)+'K':l.nav}</div>
+  </div>`;
+});
+
+const faixas = {"< R$20":0,"R$20–30":0,"R$30–40":0,"R$40–55":0,"R$55–70":0,"> R$70":0};
+livros.forEach(l => {
+  if(l.preco<20) faixas["< R$20"]++;
+  else if(l.preco<30) faixas["R$20–30"]++;
+  else if(l.preco<40) faixas["R$30–40"]++;
+  else if(l.preco<55) faixas["R$40–55"]++;
+  else if(l.preco<70) faixas["R$55–70"]++;
+  else faixas["> R$70"]++;
+});
+new Chart(document.getElementById('chartPrecos'), {
+  type: 'bar',
+  data: { labels: Object.keys(faixas), datasets: [{ data: Object.values(faixas), backgroundColor: CORES, borderRadius: 5, borderWidth: 0 }] },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false} },
+    scales:{
+      x:{ ticks:{color:'#55545c', font:{size:11}}, grid:{color:'rgba(255,255,255,0.04)'} },
+      y:{ ticks:{color:'#55545c', stepSize:5}, grid:{color:'rgba(255,255,255,0.04)'} }
+    }
+  }
+});
+
+const capas = {};
+livros.filter(l=>l.capa!=='Não informado').forEach(l => {
+  if(!capas[l.capa]) capas[l.capa]=[];
+  capas[l.capa].push(l.preco);
+});
+const capaLabels = Object.keys(capas);
+const capaMedias = capaLabels.map(c => parseFloat((capas[c].reduce((a,b)=>a+b,0)/capas[c].length).toFixed(2)));
+new Chart(document.getElementById('chartCapa'), {
+  type: 'bar',
+  data: { labels: capaLabels, datasets: [{ data: capaMedias, backgroundColor: CORES, borderRadius: 5, borderWidth: 0 }] },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>'R$ '+ctx.parsed.y.toFixed(2) } } },
+    scales:{
+      x:{ ticks:{color:'#55545c', font:{size:11}}, grid:{color:'rgba(255,255,255,0.04)'} },
+      y:{ ticks:{color:'#55545c', callback:v=>'R$'+v}, grid:{color:'rgba(255,255,255,0.04)'} }
+    }
+  }
+});
+
+const scatterData = livros.filter(l=>l.av&&l.preco<150).map(l=>({ x:l.preco, y:l.av, r:Math.max(4,Math.sqrt(l.nav/300)), label:l.titulo }));
+new Chart(document.getElementById('chartScatter'), {
+  type:'bubble',
+  data:{ datasets:[{ data:scatterData, backgroundColor:'rgba(175,169,236,0.25)', borderColor:'rgba(127,119,221,0.6)', borderWidth:1 }] },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>ctx.raw.label+' · R$ '+ctx.raw.x.toFixed(2)+' · '+ctx.raw.y.toFixed(1)+' ★' } } },
+    scales:{
+      x:{ min:0, max:100, title:{display:true,text:'preço (R$)',color:'#55545c',font:{size:11}}, ticks:{color:'#55545c',callback:v=>'R$'+v}, grid:{color:'rgba(255,255,255,0.04)'} },
+      y:{ min:4.3, max:5.1, title:{display:true,text:'avaliação',color:'#55545c',font:{size:11}}, ticks:{color:'#55545c'}, grid:{color:'rgba(255,255,255,0.04)'} }
+    },
+    layout:{padding:10}
+  }
+});
+
+function filtrar(capa, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtrados = capa==='todos' ? livros : livros.filter(l=>l.capa===capa);
+  const lista = document.getElementById('rankLista');
+  lista.innerHTML = '';
+  filtrados.forEach(l => {
+    lista.innerHTML += `<div class="rank-row">
+      <div class="rank-num">#${l.pos}</div>
+      <div class="rank-info">
+        <div class="rank-title">${l.titulo}</div>
+        <div class="rank-meta">${l.autor} · ${l.capa}${l.av?' · '+l.av.toFixed(1)+' ★':''} · ${l.nav.toLocaleString('pt-BR')} aval.</div>
+      </div>
+      <div class="rank-price">R$ ${l.preco.toFixed(2)}</div>
+    </div>`;
+  });
+}
+filtrar('todos', document.querySelector('.filter-btn'));
+</script>
+</body>
+</html>
